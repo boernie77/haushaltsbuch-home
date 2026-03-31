@@ -3,7 +3,7 @@
 ## Projektübersicht
 Budget-App für Haushalte mit Web, Mobile (iOS/Android) und KI-OCR-Quittungsanalyse.
 - **GitHub:** https://github.com/boernie77/haushaltsbuch (privat)
-- **Produktion:** https://haushalt.bernauer24.com (Hetzner VPS 37.27.193.27)
+- **Produktion:** https://haushalt.bernauer24.com (Hetzner VPS 178.104.130.161)
 - **Deployment:** Docker Compose, **automatischer Deploy bei jedem Push auf `main`** via GitHub Actions
 
 ## Stack
@@ -278,7 +278,7 @@ Persistente Daten liegen als Bind Mounts unter `./data/`:
 #   5. seedSystemCategories()
 
 # Direkt auf VPS:
-ssh -i ~/.ssh/emailrelay_vps root@37.27.193.27
+ssh -i ~/.ssh/emailrelay_vps root@178.104.130.161
 cd /opt/haushaltsbuch && git pull && docker-compose up -d --build
 ```
 
