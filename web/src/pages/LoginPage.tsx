@@ -75,10 +75,8 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-        <p className="text-center text-xs text-white/60 mt-4 space-x-3">
-          <Link to="/impressum" className="hover:text-white">Impressum</Link>
-          <span>·</span>
-          <Link to="/datenschutz" className="hover:text-white">Datenschutz</Link>
+        <p className="text-center text-xs text-white/60 mt-4">
+          <a href="https://byboernie.de" target="_blank" rel="noopener noreferrer" className="hover:text-white">byboernie.de</a>
         </p>
       </div>
     </div>

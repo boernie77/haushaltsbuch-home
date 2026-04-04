@@ -383,32 +383,16 @@ export default function SettingsScreen() {
           left={() => (
             <List.Icon
               color={theme.colors.primary}
-              icon="information-outline"
+              icon="web"
             />
           )}
-          onPress={() => Linking.openURL(`${appUrl}/impressum`)}
+          onPress={() => Linking.openURL('https://byboernie.de')}
           right={() => <List.Icon icon="open-in-new" />}
           style={{
             backgroundColor: theme.colors.cardBackground,
             paddingLeft: 8,
           }}
-          title="Impressum"
-          titleStyle={{ color: theme.colors.onSurface }}
-        />
-        <List.Item
-          left={() => (
-            <List.Icon
-              color={theme.colors.primary}
-              icon="shield-lock-outline"
-            />
-          )}
-          onPress={() => Linking.openURL(`${appUrl}/datenschutz`)}
-          right={() => <List.Icon icon="open-in-new" />}
-          style={{
-            backgroundColor: theme.colors.cardBackground,
-            paddingLeft: 8,
-          }}
-          title="Datenschutzerklärung"
+          title="byboernie.de"
           titleStyle={{ color: theme.colors.onSurface }}
         />
       </List.Section>

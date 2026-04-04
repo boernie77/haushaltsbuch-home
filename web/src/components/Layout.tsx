@@ -485,12 +485,9 @@ export default function Layout() {
         {/* Footer Links */}
         {sidebarOpen && (
           <div className="flex gap-3 px-4 pb-3 text-gray-400 text-xs dark:text-gray-600">
-            <Link className="hover:text-[var(--primary)]" to="/impressum">
-              Impressum
-            </Link>
-            <Link className="hover:text-[var(--primary)]" to="/datenschutz">
-              Datenschutz
-            </Link>
+            <a href="https://byboernie.de" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--primary)]">
+              byboernie.de
+            </a>
           </div>
         )}
       </aside>

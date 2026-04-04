@@ -13,8 +13,6 @@ import PaperlessPage from './pages/PaperlessPage';
 import AdminPage from './pages/AdminPage';
 import JoinPage from './pages/JoinPage';
 import BackupPage from './pages/BackupPage';
-import ImpressumPage from './pages/ImpressumPage';
-import DatenschutzPage from './pages/DatenschutzPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 
@@ -45,8 +43,6 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/join/:code" element={<JoinPage />} />
-      <Route path="/impressum" element={<ImpressumPage />} />
-      <Route path="/datenschutz" element={<DatenschutzPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
