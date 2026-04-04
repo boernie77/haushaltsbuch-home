@@ -12,9 +12,11 @@ const IV_BYTES = 12;
 const KEY_BYTES = 32;
 
 function getKey() {
-  const hex = process.env.ENCRYPTION_KEY;
-  if (!hex || hex.length !== 64) return null;
-  return Buffer.from(hex, 'hex');
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) return null;
+  if (key.length === 64) return Buffer.from(key, 'hex');      // 64 hex chars = 32 bytes
+  if (key.length >= 43) return Buffer.from(key, 'base64').slice(0, 32); // base64 = 44 chars
+  return null;
 }
 
 function encrypt(plaintext) {
