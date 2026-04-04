@@ -11,6 +11,9 @@ COPY . .
 
 RUN mkdir -p uploads/temp
 
+# Family Mode ist in dieser Version fest aktiviert und kann nicht deaktiviert werden
+ENV FAMILY_MODE=true
+
 EXPOSE 3000
 
 CMD ["node", "server.js"]

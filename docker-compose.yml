@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: haushaltsbuch-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: haushaltsbuch
@@ -16,21 +15,21 @@ services:
       retries: 5
 
   backend:
-    build: ./backend
-    container_name: haushaltsbuch-backend
+    image: ghcr.io/boernie77/haushaltsbuch-home-backend:latest
     restart: unless-stopped
+    pull_policy: always
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://haushalt:${DB_PASSWORD}@db:5432/haushaltsbuch
       JWT_SECRET: ${JWT_SECRET}
-      PORT: 3000
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      PORT: "3000"
       NODE_ENV: production
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       APP_URL: ${APP_URL}
-      FAMILY_MODE: ${FAMILY_MODE:-true}
+      ALLOWED_ORIGINS: ${APP_URL}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_SECURE: ${SMTP_SECURE:-false}
@@ -39,18 +38,21 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
     volumes:
       - ./data/uploads:/app/uploads
-    ports:
-      - "3001:3000"
 
   web:
-    build:
-      context: ./web
-      args:
-        VITE_API_URL: ${API_URL}
-    container_name: haushaltsbuch-web
+    image: ghcr.io/boernie77/haushaltsbuch-home-web:latest
     restart: unless-stopped
-    ports:
-      - "8081:80"
+    pull_policy: always
     depends_on:
       - backend
+    ports:
+      - "${WEB_PORT:-8481}:80"
 
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_CLEANUP: "true"
+    command: --interval 86400
