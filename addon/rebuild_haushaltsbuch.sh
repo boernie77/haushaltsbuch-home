@@ -1,6 +1,6 @@
 #!/bin/bash
 # Haushaltsbuch – Libre Workspace Addon Rebuild
-# Rekonstruiert die App ohne Datenverlust (Datenbank und Uploads bleiben erhalten).
+# Startet alle Container neu ohne Datenverlust (Datenbank und Uploads bleiben erhalten).
 
 set -euo pipefail
 
@@ -14,16 +14,12 @@ fi
 echo "[haushaltsbuch] Stoppe Container (Daten bleiben erhalten)..."
 cd "${APP_DIR}" && docker-compose down --remove-orphans
 
-echo "[haushaltsbuch] Entferne alte Images..."
-docker rmi haushaltsbuch-backend haushaltsbuch-web 2>/dev/null || true
+echo "[haushaltsbuch] Lade aktuelle docker-compose.yml..."
+curl -fsSL "https://raw.githubusercontent.com/boernie77/haushaltsbuch-home/main/docker-compose.yml" \
+    -o "${APP_DIR}/docker-compose.yml"
 
-echo "[haushaltsbuch] Aktualisiere Repository..."
-if [ -d "${APP_DIR}/src/.git" ]; then
-    git -C "${APP_DIR}/src" pull --ff-only
-fi
-
-echo "[haushaltsbuch] Baue neue Images..."
-cd "${APP_DIR}" && docker-compose build --no-cache
+echo "[haushaltsbuch] Ziehe aktuelle Images..."
+cd "${APP_DIR}" && docker-compose pull
 
 echo "[haushaltsbuch] Starte Container..."
 cd "${APP_DIR}" && docker-compose up -d

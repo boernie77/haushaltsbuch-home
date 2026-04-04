@@ -7,11 +7,13 @@ APP_DIR="/root/haushaltsbuch"
 
 echo "[haushaltsbuch] Stoppe und entferne Container..."
 if [ -f "${APP_DIR}/docker-compose.yml" ]; then
-    cd "${APP_DIR}" && docker-compose down --volumes --remove-orphans || true
+    cd "${APP_DIR}" && docker-compose down --remove-orphans || true
 fi
 
 echo "[haushaltsbuch] Entferne Docker-Images..."
-docker rmi haushaltsbuch-backend haushaltsbuch-web 2>/dev/null || true
+docker rmi ghcr.io/boernie77/haushaltsbuch-home-backend:latest \
+           ghcr.io/boernie77/haushaltsbuch-home-web:latest \
+           containrrr/watchtower 2>/dev/null || true
 
 echo "[haushaltsbuch] Entferne Caddy-Konfiguration..."
 rm -f /etc/caddy/sites/haushaltsbuch.caddy
