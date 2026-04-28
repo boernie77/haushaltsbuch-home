@@ -42,6 +42,11 @@ app.get("/api/config", (req, res) => {
   res.json({
     familyMode: process.env.FAMILY_MODE === "true",
     appUrl: process.env.APP_URL || "",
+    oidcEnabled: !!(
+      process.env.OIDC_ISSUER_URL &&
+      process.env.OIDC_CLIENT_ID &&
+      process.env.OIDC_CLIENT_SECRET
+    ),
   });
 });
 
