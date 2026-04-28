@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
-import { householdAPI } from '../services/api';
+import { api, householdAPI } from '../services/api';
 
 interface LoginForm { email: string; password: string; }
 
@@ -11,7 +11,28 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login, setHouseholds, setCurrentHousehold } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+
+  // SSO error from backend redirect (?sso_error=...)
+  useEffect(() => {
+    const ssoError = searchParams.get('sso_error');
+    if (ssoError) {
+      toast.error(ssoError);
+      window.history.replaceState(null, '', '/login');
+    }
+  }, [searchParams]);
+
+  // SSO success: Backend redirected with #token=<jwt>
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const token = hash.get('token');
+    if (!token) return;
+    localStorage.setItem('auth_token', token);
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    window.history.replaceState(null, '', '/login');
+    useAuthStore.getState().loadStoredAuth().then(() => navigate('/'));
+  }, [navigate]);
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
@@ -26,6 +47,11 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSsoLogin = () => {
+    const apiBase = (api.defaults.baseURL || '/api').replace(/\/$/, '');
+    window.location.href = `${apiBase}/auth/oidc/login`;
   };
 
   return (
@@ -65,6 +91,21 @@ export default function LoginPage() {
               Anmelden
             </button>
           </form>
+          <div className="my-4 flex items-center gap-3 text-gray-400 text-xs">
+            <div className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
+            <span>oder</span>
+            <div className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
+          </div>
+          <button
+            type="button"
+            onClick={handleSsoLogin}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-2 font-medium text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4 0-7 2-7 5v1h14v-1c0-3-3-5-7-5z" />
+            </svg>
+            Mit SSO anmelden
+          </button>
           <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4 space-y-2">
             <p>
               Noch kein Konto?{' '}
