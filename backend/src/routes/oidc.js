@@ -1,7 +1,10 @@
 const router = require("express").Router();
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { Issuer, generators } = require("openid-client");
-const { User } = require("../models");
+const { User, Household, HouseholdMember, sequelize } = require("../models");
+const { seedSystemCategories } = require("../utils/seedCategories");
 
 let _clientPromise;
 function getClient() {
@@ -109,12 +112,65 @@ router.get("/callback", async (req, res) => {
     let user = await User.findOne({ where: { oidcSubject: sub } });
     if (!user) {
       user = await User.findOne({ where: { email } });
-      if (!user) {
-        return fail(
-          `Kein Haushaltsbuch-Konto fuer ${email} gefunden. Bitte vom Admin einladen lassen.`
+      if (user) {
+        await user.update({ oidcSubject: sub });
+      } else {
+        // Auto-Provision: erster SSO-Login eines Authentik-Users → eigener
+        // Privat-Haushalt, kein Invite-Code nötig. Authentik ist Source-of-Truth
+        // für „wer darf rein" (Familie-Group-Binding).
+        const displayName =
+          claims.name || claims.preferred_username || email.split("@")[0];
+        user = await sequelize.transaction(async (t) => {
+          const userCount = await User.count({ transaction: t });
+          const isFirst = userCount === 0;
+          const isFamilyMode = process.env.FAMILY_MODE === "true";
+          const noTrial = isFirst || isFamilyMode;
+          // Random-Hash als Platzhalter — User loggt nur via SSO ein, das Feld
+          // ist im Schema NOT NULL, wird aber nie verifiziert.
+          const placeholderPw = await bcrypt.hash(
+            crypto.randomBytes(32).toString("hex"),
+            12
+          );
+          const newUser = await User.create(
+            {
+              name: displayName,
+              email,
+              password: placeholderPw,
+              role: isFirst ? "superadmin" : "member",
+              subscriptionType: noTrial ? null : "trial",
+              trialStartedAt: noTrial ? null : new Date(),
+              trialEndsAt: noTrial
+                ? null
+                : new Date(Date.now() + 31 * 24 * 60 * 60 * 1000),
+              oidcSubject: sub,
+            },
+            { transaction: t }
+          );
+          const household = await Household.create(
+            {
+              name: `${displayName}s Haushalt`,
+              adminUserId: newUser.id,
+              isShared: false,
+            },
+            { transaction: t }
+          );
+          await HouseholdMember.create(
+            {
+              householdId: household.id,
+              userId: newUser.id,
+              role: "admin",
+            },
+            { transaction: t }
+          );
+          return newUser;
+        });
+        // Nur einmal global, nicht pro User — seedSystemCategories nutzt
+        // findOrCreate und ist daher idempotent.
+        await seedSystemCategories();
+        console.log(
+          `[oidc] Auto-Provision: User ${email} angelegt mit eigenem Haushalt`
         );
       }
-      await user.update({ oidcSubject: sub });
     }
 
     if (!user.isActive) {

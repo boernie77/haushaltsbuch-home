@@ -1,23 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
-import { api, householdAPI } from '../services/api';
-
-interface LoginForm { email: string; password: string; }
+import { api } from '../services/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, setHouseholds, setCurrentHousehold } = useAuthStore();
-  const [loading, setLoading] = useState(false);
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
     api.get('/config').then(r => setOidcEnabled(!!r.data.oidcEnabled)).catch(() => {});
   }, []);
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
 
   // SSO error from backend redirect (?sso_error=...)
   useEffect(() => {
@@ -39,21 +33,6 @@ export default function LoginPage() {
     useAuthStore.getState().loadStoredAuth().then(() => navigate('/'));
   }, [navigate]);
 
-  const onSubmit = async (data: LoginForm) => {
-    setLoading(true);
-    try {
-      await login(data.email, data.password);
-      const { data: hd } = await householdAPI.getAll();
-      setHouseholds(hd.households);
-      if (hd.households.length > 0) setCurrentHousehold(hd.households[0]);
-      navigate('/');
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Anmeldung fehlgeschlagen');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSsoLogin = () => {
     const apiBase = (api.defaults.baseURL || '/api').replace(/\/$/, '');
     window.location.href = `${apiBase}/auth/oidc/login`;
@@ -69,61 +48,25 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Anmelden</h2>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-Mail</label>
-              <input
-                type="email"
-                className="input"
-                placeholder="deine@email.de"
-                {...register('email', { required: 'E-Mail ist erforderlich' })}
-              />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Passwort</label>
-              <input
-                type="password"
-                className="input"
-                placeholder="••••••••"
-                {...register('password', { required: 'Passwort ist erforderlich' })}
-              />
-              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-            </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50">
-              {loading ? <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> : null}
-              Anmelden
-            </button>
-          </form>
-          {oidcEnabled && (
-            <>
-              <div className="my-4 flex items-center gap-3 text-gray-400 text-xs">
-                <div className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
-                <span>oder</span>
-                <div className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
-              </div>
-              <button
-                type="button"
-                onClick={handleSsoLogin}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-2 font-medium text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4 0-7 2-7 5v1h14v-1c0-3-3-5-7-5z" />
-                </svg>
-                Mit SSO anmelden
-              </button>
-            </>
+          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white text-center">Anmelden</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
+            Anmeldung erfolgt zentral über Authentik.
+          </p>
+          <button
+            type="button"
+            onClick={handleSsoLogin}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4 0-7 2-7 5v1h14v-1c0-3-3-5-7-5z" />
+            </svg>
+            Mit Authentik anmelden
+          </button>
+          {!oidcEnabled && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 text-center">
+              Hinweis: SSO ist serverseitig nicht konfiguriert (OIDC_*-Env fehlt).
+            </p>
           )}
-          <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4 space-y-2">
-            <p>
-              Noch kein Konto?{' '}
-              <Link to="/register" className="text-[var(--primary)] hover:underline font-medium">Registrieren</Link>
-            </p>
-            <p>
-              <Link to="/forgot-password" className="text-[var(--primary)] hover:underline">Passwort vergessen?</Link>
-            </p>
-          </div>
         </div>
         <p className="text-center text-xs text-white/60 mt-4">
           <a href="https://byboernie.de" target="_blank" rel="noopener noreferrer" className="hover:text-white">byboernie.de</a>
