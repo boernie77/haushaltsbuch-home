@@ -1,38 +1,114 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --primary: #E91E8C;
-  --primary-light: #FFD6EC;
-  --primary-dark: #9C27B0;
-  --income: #4CAF50;
-  --expense: #E91E8C;
-  --warning: #FF9800;
+  --primary: #e91e8c;
+  --primary-light: #ffd6ec;
+  --primary-dark: #9c27b0;
+  --income: #4caf50;
+  --expense: #e91e8c;
+  --warning: #ff9800;
 }
 
 .dark {
-  --primary: #2196F3;
-  --primary-light: #1565C0;
-  --primary-dark: #0097A7;
-  --income: #4CAF50;
-  --expense: #F44336;
+  --primary: #2196f3;
+  --primary-light: #1565c0;
+  --primary-dark: #0097a7;
+  --income: #4caf50;
+  --expense: #f44336;
+}
+
+/* ── Professional Hell (Slate + Amber) ────────────────────────────── */
+html.professional {
+  --primary: #b45309;
+  --primary-light: #fef3c7;
+  --primary-dark: #92400e;
+  --income: #16a34a;
+  --expense: #dc2626;
+  --warning: #d97706;
+}
+
+/* ── Professional Dunkel (Gray + Amber) ───────────────────────────── */
+html.professional.dark {
+  --primary: #fbbf24;
+  --primary-light: #92400e;
+  --primary-dark: #d97706;
+  --income: #4ade80;
+  --expense: #f87171;
+  --warning: #fcd34d;
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   @apply bg-pink-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100;
+}
+
+/* ── Professional: Body ───────────────────────────────────────────── */
+html.professional body {
+  @apply bg-slate-100 text-slate-900;
+}
+html.professional.dark body {
+  @apply bg-gray-900 text-gray-100;
 }
 
 .card {
   @apply bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-pink-100 dark:border-slate-700;
 }
 
+/* ── Professional: Card — eckig, kein Pink ────────────────────────── */
+html.professional .card {
+  @apply rounded border-slate-300 shadow-none;
+}
+html.professional.dark .card {
+  @apply bg-gray-800 border-gray-700 rounded;
+}
+
+/* ── Professional: Layout-Wrapper ────────────────────────────────── */
+html.professional .layout-bg {
+  @apply bg-slate-100;
+}
+html.professional.dark .layout-bg {
+  @apply bg-gray-900;
+}
+
+/* ── Professional: Sidebar-Hover ─────────────────────────────────── */
+html.professional .sidebar-hover:hover {
+  @apply bg-slate-200;
+}
+html.professional.dark .sidebar-hover:hover {
+  @apply bg-gray-700;
+}
+
+/* ── Professional: Eckige Nav-Items in der Sidebar ───────────────── */
+html.professional aside nav a,
+html.professional aside nav button {
+  border-radius: 4px !important;
+}
+
 .btn-primary {
   @apply bg-[var(--primary)] hover:opacity-90 text-white font-semibold px-4 py-2 rounded-xl transition-all;
 }
 
+.btn-secondary {
+  @apply bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 font-medium px-4 py-2 rounded-xl transition-all;
+}
+
+/* ── Professional: Eckige Buttons ────────────────────────────────── */
+html.professional .btn-primary,
+html.professional .btn-secondary {
+  @apply rounded;
+}
+
 .input {
   @apply w-full border border-gray-200 dark:border-slate-600 rounded-xl px-3 py-2 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--primary)];
+}
+
+/* ── Professional: Eckige Inputs ─────────────────────────────────── */
+html.professional .input {
+  @apply rounded border-slate-300;
+}
+html.professional.dark .input {
+  @apply border-gray-600 bg-gray-800;
 }

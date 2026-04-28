@@ -29,7 +29,12 @@ const User = sequelize.define(
       defaultValue: "member",
     },
     theme: {
-      type: DataTypes.ENUM("feminine", "masculine"),
+      type: DataTypes.ENUM(
+        "feminine",
+        "masculine",
+        "professional-light",
+        "professional-dark"
+      ),
       defaultValue: "feminine",
     },
     avatar: { type: DataTypes.STRING, allowNull: true },
@@ -190,6 +195,7 @@ const Transaction = sequelize.define(
     },
     recurringNextDate: { type: DataTypes.DATEONLY, allowNull: true },
     recurringSourceId: { type: DataTypes.UUID, allowNull: true },
+    recurringEndDate: { type: DataTypes.DATEONLY, allowNull: true },
     isPersonal: { type: DataTypes.BOOLEAN, defaultValue: false },
     targetHouseholdId: { type: DataTypes.UUID, allowNull: true },
     tip: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },

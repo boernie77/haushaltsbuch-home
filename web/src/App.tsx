@@ -16,6 +16,18 @@ import BackupPage from './pages/BackupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 
+export function applyThemeClasses(theme: string | undefined) {
+  const html = document.documentElement;
+  html.classList.remove("dark", "professional");
+  if (theme === "masculine") {
+    html.classList.add("dark");
+  } else if (theme === "professional-light") {
+    html.classList.add("professional");
+  } else if (theme === "professional-dark") {
+    html.classList.add("dark", "professional");
+  }
+}
+
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -29,13 +41,8 @@ export default function App() {
     loadStoredAuth();
   }, []);
 
-  // Apply theme
   useEffect(() => {
-    if (user?.theme === 'masculine') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    applyThemeClasses(user?.theme);
   }, [user?.theme]);
 
   return (

@@ -44,12 +44,12 @@ export default function TransactionsPage() {
   const calcCurrentPeriod = (sd: number) => {
     let m = now.getMonth() + 1;
     let y = now.getFullYear();
-    if (sd > 1 && now.getDate() < sd) {
-      if (m === 1) {
-        m = 12;
-        y -= 1;
+    if (sd > 1 && now.getDate() >= sd) {
+      if (m === 12) {
+        m = 1;
+        y += 1;
       } else {
-        m -= 1;
+        m += 1;
       }
     }
     return { month: m, year: y };
@@ -62,8 +62,8 @@ export default function TransactionsPage() {
     if (startDay <= 1) {
       return format(new Date(y, m - 1, 1), "MMMM yyyy", { locale: de });
     }
-    const start = new Date(y, m - 1, startDay);
-    const end = new Date(y, m, startDay - 1);
+    const start = new Date(y, m - 2, startDay);
+    const end = new Date(y, m - 1, startDay - 1);
     return `${format(start, "d. MMM", { locale: de })} – ${format(end, "d. MMM yyyy", { locale: de })}`;
   };
   const prevPeriod = () => {
@@ -93,6 +93,7 @@ export default function TransactionsPage() {
     receiptFile: null as File | null,
     isRecurring: false,
     recurringInterval: "monthly",
+    recurringEndDate: "",
     targetHouseholdId: "",
     tip: "",
   });
@@ -128,6 +129,15 @@ export default function TransactionsPage() {
   const [moveTargetId, setMoveTargetId] = useState("");
 
   const [paperlessUsers, setPaperlessUsers] = useState<any[]>([]);
+
+  // Eigene Kategorie anlegen
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryForm, setCategoryForm] = useState({
+    name: "",
+    icon: "📦",
+    color: "#6B7280",
+  });
+  const [categorySaving, setCategorySaving] = useState(false);
 
   const API_BASE = (import.meta.env.VITE_API_URL || "/api").replace("/api", "");
 
@@ -255,6 +265,7 @@ export default function TransactionsPage() {
       receiptFile: null,
       isRecurring: false,
       recurringInterval: "monthly",
+      recurringEndDate: "",
       targetHouseholdId: "",
       tip: "",
     });
@@ -275,6 +286,7 @@ export default function TransactionsPage() {
       receiptFile: null,
       isRecurring: t.isRecurring,
       recurringInterval: t.recurringInterval || "monthly",
+      recurringEndDate: t.recurringEndDate || "",
       targetHouseholdId: t.targetHouseholdId || "",
       tip: tipVal > 0 ? tipVal.toFixed(2) : "",
     });
@@ -306,35 +318,43 @@ export default function TransactionsPage() {
           tags: [],
           isRecurring: form.isRecurring,
           recurringInterval: form.isRecurring ? form.recurringInterval : null,
+          recurringEndDate:
+            form.isRecurring && form.recurringEndDate
+              ? form.recurringEndDate
+              : null,
         });
         toast.success("Buchung aktualisiert");
       } else {
         // Create new
         const fd = new FormData();
-        Object.entries(form).forEach(([k, v]) => {
-          if (k === "receiptFile" && v) {
-            fd.append("receipt", v as File);
-          } else if (k === "amount") {
-            fd.append("amount", String(totalAmount));
-          } else if (k === "tip") {
-            if (tipAmount > 0) {
-              fd.append("tip", String(tipAmount));
-            }
-          } else if (
-            ![
-              "receiptFile",
-              "isRecurring",
-              "recurringInterval",
-              "targetHouseholdId",
-            ].includes(k) &&
-            v
-          ) {
-            fd.append(k, v as string);
-          }
-        });
+        if (form.receiptFile) {
+          fd.append("receipt", form.receiptFile);
+        }
+        fd.append("amount", String(totalAmount));
+        if (tipAmount > 0) {
+          fd.append("tip", String(tipAmount));
+        }
+        if (form.description) {
+          fd.append("description", form.description);
+        }
+        if (form.merchant) {
+          fd.append("merchant", form.merchant);
+        }
+        if (form.date) {
+          fd.append("date", form.date);
+        }
+        if (form.type) {
+          fd.append("type", form.type);
+        }
+        if (form.categoryId) {
+          fd.append("categoryId", form.categoryId);
+        }
         if (form.isRecurring) {
           fd.append("isRecurring", "true");
           fd.append("recurringInterval", form.recurringInterval);
+          if (form.recurringEndDate) {
+            fd.append("recurringEndDate", form.recurringEndDate);
+          }
         }
         if (form.type === "transfer" && form.targetHouseholdId) {
           fd.append("targetHouseholdId", form.targetHouseholdId);
@@ -416,6 +436,32 @@ export default function TransactionsPage() {
       transactionId: t.id,
       title: t.description || t.merchant || "Quittung",
     });
+  };
+
+  const handleCreateCategory = async () => {
+    if (!(categoryForm.name.trim() && currentHousehold)) {
+      toast.error("Name ist Pflicht");
+      return;
+    }
+    setCategorySaving(true);
+    try {
+      const { data } = await categoryAPI.create({
+        name: categoryForm.name.trim(),
+        nameDE: categoryForm.name.trim(),
+        icon: categoryForm.icon,
+        color: categoryForm.color,
+        householdId: currentHousehold.id,
+      });
+      toast.success("Kategorie angelegt");
+      const refreshed = await categoryAPI.getAll(currentHousehold.id);
+      setCategories(refreshed.data.categories);
+      setForm((f) => ({ ...f, categoryId: data.category.id }));
+      setShowCategoryModal(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Fehler beim Anlegen");
+    } finally {
+      setCategorySaving(false);
+    }
   };
 
   const handlePaperlessUpload = async () => {
@@ -670,20 +716,37 @@ export default function TransactionsPage() {
                 <label className="mb-1 block font-medium text-gray-700 text-sm dark:text-gray-300">
                   Kategorie
                 </label>
-                <select
-                  className="input"
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, categoryId: e.target.value }))
-                  }
-                  value={form.categoryId}
-                >
-                  <option value="">-- Wählen --</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.icon} {c.nameDE || c.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    className="input flex-1"
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, categoryId: e.target.value }))
+                    }
+                    value={form.categoryId}
+                  >
+                    <option value="">-- Wählen --</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {c.nameDE || c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="rounded-xl border-2 border-[var(--primary)] px-3 text-[var(--primary)] transition-all hover:bg-[var(--primary)] hover:text-white"
+                    onClick={() => {
+                      setCategoryForm({
+                        name: "",
+                        icon: "📦",
+                        color: "#6B7280",
+                      });
+                      setShowCategoryModal(true);
+                    }}
+                    title="Neue Kategorie anlegen"
+                    type="button"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
               </div>
             )}
             {form.type === "transfer" && (
@@ -858,29 +921,47 @@ export default function TransactionsPage() {
                 </span>
               </label>
               {form.isRecurring && (
-                <div className="mt-2 flex gap-2">
-                  {["weekly", "monthly", "yearly"].map((iv) => (
-                    <button
-                      className={`rounded-xl px-3 py-1.5 font-medium text-xs transition-all ${form.recurringInterval === iv ? "bg-[var(--primary)] text-white" : "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-gray-300"}`}
-                      key={iv}
-                      onClick={() =>
-                        setForm((f) => ({ ...f, recurringInterval: iv }))
+                <div className="mt-2 flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    {["weekly", "monthly", "yearly"].map((iv) => (
+                      <button
+                        className={`rounded-xl px-3 py-1.5 font-medium text-xs transition-all ${form.recurringInterval === iv ? "bg-[var(--primary)] text-white" : "bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-gray-300"}`}
+                        key={iv}
+                        onClick={() =>
+                          setForm((f) => ({ ...f, recurringInterval: iv }))
+                        }
+                        type="button"
+                      >
+                        {iv === "weekly"
+                          ? "Wöchentlich"
+                          : iv === "monthly"
+                            ? "Monatlich"
+                            : "Jährlich"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="whitespace-nowrap text-gray-600 text-xs dark:text-gray-400">
+                      Enddatum (optional):
+                    </label>
+                    <input
+                      className="input text-sm"
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          recurringEndDate: e.target.value,
+                        }))
                       }
-                      type="button"
-                    >
-                      {iv === "weekly"
-                        ? "Wöchentlich"
-                        : iv === "monthly"
-                          ? "Monatlich"
-                          : "Jährlich"}
-                    </button>
-                  ))}
+                      type="date"
+                      value={form.recurringEndDate}
+                    />
+                  </div>
                 </div>
               )}
             </div>
             <div className="flex justify-end gap-3 md:col-span-2">
               <button
-                className="rounded-xl bg-gray-100 px-4 py-2 font-medium text-gray-700 text-sm dark:bg-slate-700 dark:text-gray-300"
+                className="btn-secondary"
                 onClick={() => {
                   setShowForm(false);
                   setEditingId(null);
@@ -920,6 +1001,7 @@ export default function TransactionsPage() {
                     "Betrag",
                     "Intervall",
                     "Nächste Buchung",
+                    "Enddatum",
                     "",
                   ].map((h) => (
                     <th
@@ -966,6 +1048,11 @@ export default function TransactionsPage() {
                     <td className="px-4 py-3 text-gray-500 text-sm">
                       {r.recurringNextDate
                         ? format(new Date(r.recurringNextDate), "dd.MM.yyyy")
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-sm">
+                      {r.recurringEndDate
+                        ? format(new Date(r.recurringEndDate), "dd.MM.yyyy")
                         : "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -1179,7 +1266,7 @@ export default function TransactionsPage() {
             )}
             <div className="flex justify-end gap-3">
               <button
-                className="rounded-xl bg-gray-100 px-4 py-2 font-medium text-gray-700 text-sm dark:bg-slate-700 dark:text-gray-300"
+                className="btn-secondary"
                 onClick={() => setMoveDialog(null)}
               >
                 Abbrechen
@@ -1423,6 +1510,164 @@ export default function TransactionsPage() {
                   <FileText size={16} />
                 )}
                 Hochladen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kategorie-Anlegen-Modal */}
+      {showCategoryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowCategoryModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-bold text-gray-900 text-lg dark:text-white">
+                Neue Kategorie anlegen
+              </h3>
+              <button
+                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setShowCategoryModal(false)}
+                type="button"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block font-medium text-gray-700 text-sm dark:text-gray-300">
+                  Name *
+                </label>
+                <input
+                  autoFocus
+                  className="input"
+                  onChange={(e) =>
+                    setCategoryForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  placeholder="z.B. Hobby"
+                  type="text"
+                  value={categoryForm.name}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block font-medium text-gray-700 text-sm dark:text-gray-300">
+                  Symbol
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "📦",
+                    "🏠",
+                    "🚗",
+                    "🍕",
+                    "🛒",
+                    "🎬",
+                    "👕",
+                    "💊",
+                    "✈️",
+                    "🎁",
+                    "📚",
+                    "🎮",
+                    "💪",
+                    "🐾",
+                    "🌱",
+                    "💼",
+                    "📱",
+                    "🔧",
+                    "💳",
+                    "🎨",
+                  ].map((emoji) => (
+                    <button
+                      className={`rounded-xl border-2 p-2 text-2xl transition-all ${categoryForm.icon === emoji ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-transparent hover:bg-gray-100 dark:hover:bg-slate-700"}`}
+                      key={emoji}
+                      onClick={() =>
+                        setCategoryForm((f) => ({ ...f, icon: emoji }))
+                      }
+                      type="button"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  className="input mt-2 text-sm"
+                  onChange={(e) =>
+                    setCategoryForm((f) => ({ ...f, icon: e.target.value }))
+                  }
+                  placeholder="Eigenes Emoji"
+                  type="text"
+                  value={categoryForm.icon}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block font-medium text-gray-700 text-sm dark:text-gray-300">
+                  Farbe
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    className="h-10 w-16 cursor-pointer rounded-lg border border-gray-300"
+                    onChange={(e) =>
+                      setCategoryForm((f) => ({ ...f, color: e.target.value }))
+                    }
+                    type="color"
+                    value={categoryForm.color}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "#6B7280",
+                      "#EF4444",
+                      "#F97316",
+                      "#EAB308",
+                      "#22C55E",
+                      "#06B6D4",
+                      "#3B82F6",
+                      "#8B5CF6",
+                      "#EC4899",
+                    ].map((c) => (
+                      <button
+                        className={`h-8 w-8 rounded-full border-2 transition-all ${categoryForm.color === c ? "border-gray-900 dark:border-white" : "border-transparent"}`}
+                        key={c}
+                        onClick={() =>
+                          setCategoryForm((f) => ({ ...f, color: c }))
+                        }
+                        style={{ background: c }}
+                        type="button"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3 dark:bg-slate-700">
+                <span className="text-2xl">{categoryForm.icon}</span>
+                <span
+                  className="font-medium"
+                  style={{ color: categoryForm.color }}
+                >
+                  {categoryForm.name || "Vorschau"}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowCategoryModal(false)}
+                type="button"
+              >
+                Abbrechen
+              </button>
+              <button
+                className="btn-primary disabled:opacity-50"
+                disabled={categorySaving || !categoryForm.name.trim()}
+                onClick={handleCreateCategory}
+                type="button"
+              >
+                {categorySaving ? "Speichere..." : "Anlegen"}
               </button>
             </div>
           </div>
